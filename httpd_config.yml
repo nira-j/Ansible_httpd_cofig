@@ -1,0 +1,79 @@
+ - hosts: 192.168.43.57
+    
+   vars: 
+   - port_no: "8080"
+   - dvd_dir: "/dvd"
+   - doc_root: "/var/www/myfolder"
+   tasks:
+   - name: "creating directory for mounting"
+     file: 
+      state: directory
+      path: "{{dvd_dir}}"
+     
+   - name: "mounting ....."
+     mount:
+      src: "/dev/sr0"
+      fstype: iso9660
+      state: mounted
+      path: "{{dvd_dir}}"
+     
+   - name: ".repo file configuration for AppStream"
+     yum_repository:
+      name: "dvd1"
+      description: "AppStream conf"
+      baseurl: "{{dvd_dir}}/AppStream"
+      gpgcheck: no
+
+   - name: ".repo file configuration for BaseOS"
+     yum_repository:
+      name: "dvd2"
+      description: "BaseOS conf"
+      baseurl: "{{dvd_dir}}/BaseOS"
+      gpgcheck: no
+
+   - name: "Installation of httpd server"
+     package:
+      name: httpd
+      state: present
+        
+   - name: "start httpd service"
+     service:
+      name: httpd
+      state: started
+  
+   - name: "coopying configuration file"
+     template:
+      src: "/root/httpdc.conf"
+      dest: "/etc/httpd/conf.d/httpdc.conf"
+     notify: Restart Service
+
+   - name: "Enabling Firewall sevice"
+     firewalld:
+      port: "{{port_no}}/tcp"
+      state: enabled
+      permanent: yes
+      immediate: yes
+
+   - name: "creating new documet root directory"
+     file:
+      path: "{{doc_root}}"
+      state: directory
+
+   - name: "copying content to document root"
+     copy:
+      content: "hello, how are you. "
+      dest: "{{doc_root}}/index.html"
+   
+   handlers:
+   - name: "Restart Service"
+     service:
+      name: "httpd"
+      state: restarted    
+
+
+
+
+
+
+
+
